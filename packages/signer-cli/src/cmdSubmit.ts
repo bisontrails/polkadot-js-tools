@@ -39,12 +39,16 @@ export default async function cmdSubmit (account: string, blocks: number | undef
   if (blocks === 0) {
     options.era = 0;
   } else if (blocks != null) {
-    // Get current block if we want to modify the number of blocks we have to sign
-    const signedBlock = await api.rpc.chain.getBlock();
-    options.blockHash = signedBlock.block.header.hash;
+    // Get last finalized block and calc number of blocks since then
+    const lastFinalizedHash = await api.rpc.chain.getFinalizedHead();
+    const lastFinalizedBlock = await api.rpc.chain.getBlock(lastFinalizedHash);
+    const currentBlock = await api.rpc.chain.getBlock();
+    const blocksSinceLastFinalized = currentBlock.block.header.number.toNumber() - lastFinalizedBlock.block.header.number.toNumber();
+
+    options.blockHash = lastFinalizedBlock.block.header.hash;
     options.era = createType('ExtrinsicEra', {
-      current: signedBlock.block.header.number,
-      period: blocks
+      current: lastFinalizedBlock.block.header.number,
+      period: blocks + blocksSinceLastFinalized
     });
   }
 
